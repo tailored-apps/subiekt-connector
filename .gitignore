@@ -1,0 +1,11 @@
+## .NET gitignore
+bin/
+obj/
+*.user
+*.suo
+.vs/
+*.swp
+*.swo
+.DS_Store
+appsettings.Development.json
+secrets.json
