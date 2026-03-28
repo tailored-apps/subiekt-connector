@@ -1,0 +1,305 @@
+@page "/klienci/{Id:guid}"
+@using Subiekt.Connector.Sdk
+@using Subiekt.Connector.Contracts
+@inject SubiektClient Sdk
+
+<h3>Klient — edycja</h3>
+
+@if (!Sdk.IsAuthorized)
+{
+    <div class="alert alert-warning">Nie jesteś zalogowany. <a href="auth">Przejdź do autoryzacji</a></div>
+    return;
+}
+
+@if (loading)
+{
+    <p><span class="spinner-border spinner-border-sm"></span> Ładowanie...</p>
+    return;
+}
+
+@if (success is not null)
+{
+    <div class="alert alert-success">@success</div>
+}
+
+@if (error is not null)
+{
+    <div class="alert alert-danger">@error</div>
+}
+
+@if (form is null) return;
+
+<div class="row g-3">
+    <div class="col-md-4">
+        <label class="form-label">ID</label>
+        <input class="form-control" readonly value="@Id" />
+    </div>
+
+    <div class="col-md-8">
+        <label class="form-label fw-bold">Nazwa *</label>
+        <input class="form-control" @bind="form.Name" />
+    </div>
+    <div class="col-md-4">
+        <label class="form-label">Rodzaj</label>
+        <select class="form-select" @bind="form.Kind">
+            <option value="Company">Firma</option>
+            <option value="Person">Osoba</option>
+        </select>
+    </div>
+
+    <div class="col-md-3">
+        <label class="form-label">NIP / PESEL</label>
+        <input class="form-control" @bind="form.Tin" />
+    </div>
+    <div class="col-md-3">
+        <label class="form-label">Typ identyfikatora</label>
+        <select class="form-select" @bind="form.TinKind">
+            <option value="">--</option>
+            <option value="Nip">NIP</option>
+            <option value="Vatin">VATIN</option>
+            <option value="Pesel">PESEL</option>
+        </select>
+    </div>
+    <div class="col-md-3">
+        <label class="form-label">Grupa</label>
+        <input class="form-control" @bind="form.Group" />
+    </div>
+    <div class="col-md-3">
+        <div class="form-check mt-4">
+            <input class="form-check-input" type="checkbox" @bind="form.Favourite" id="fav" />
+            <label class="form-check-label" for="fav">Ulubiony</label>
+        </div>
+    </div>
+
+    <div class="col-12"><hr /><h5>Adres</h5></div>
+
+    <div class="col-md-6">
+        <label class="form-label">Ulica</label>
+        <input class="form-control" @bind="form.Street" />
+    </div>
+    <div class="col-md-3">
+        <label class="form-label">Kod pocztowy</label>
+        <input class="form-control" @bind="form.ZipCode" />
+    </div>
+    <div class="col-md-3">
+        <label class="form-label">Miasto</label>
+        <input class="form-control" @bind="form.City" />
+    </div>
+    <div class="col-md-3">
+        <label class="form-label">Kraj</label>
+        <input class="form-control" @bind="form.Country" />
+    </div>
+
+    <div class="col-12"><h6>Adres dostawy</h6></div>
+    <div class="col-md-6">
+        <label class="form-label">Ulica</label>
+        <input class="form-control" @bind="form.DelStreet" />
+    </div>
+    <div class="col-md-3">
+        <label class="form-label">Kod pocztowy</label>
+        <input class="form-control" @bind="form.DelZipCode" />
+    </div>
+    <div class="col-md-3">
+        <label class="form-label">Miasto</label>
+        <input class="form-control" @bind="form.DelCity" />
+    </div>
+    <div class="col-md-3">
+        <label class="form-label">Kraj</label>
+        <input class="form-control" @bind="form.DelCountry" />
+    </div>
+
+    <div class="col-12"><hr /><h5>Kontakt</h5></div>
+
+    <div class="col-md-3">
+        <label class="form-label">Telefon 1</label>
+        <input class="form-control" @bind="form.Phone1" />
+    </div>
+    <div class="col-md-3">
+        <label class="form-label">Telefon 2</label>
+        <input class="form-control" @bind="form.Phone2" />
+    </div>
+    <div class="col-md-3">
+        <label class="form-label">Email</label>
+        <input class="form-control" @bind="form.Email" />
+    </div>
+    <div class="col-md-3">
+        <label class="form-label">Skype</label>
+        <input class="form-control" @bind="form.Skype" />
+    </div>
+    <div class="col-md-3">
+        <label class="form-label">WWW</label>
+        <input class="form-control" @bind="form.Website" />
+    </div>
+
+    <div class="col-12"><hr /><h5>Ustawienia handlowe</h5></div>
+
+    <div class="col-md-3">
+        <label class="form-label">Domyślny rabat (%)</label>
+        <input class="form-control" type="number" step="0.01" @bind="form.DefaultDiscount" />
+    </div>
+    <div class="col-md-3">
+        <label class="form-label">Domyślny termin płatności (dni)</label>
+        <input class="form-control" type="number" @bind="form.DefaultDueDate" />
+    </div>
+    <div class="col-md-3">
+        <label class="form-label">Domyślna metoda płatności</label>
+        <select class="form-select" @bind="form.DefaultPaymentMethod">
+            <option value="">--</option>
+            <option value="BankTransfer">Przelew</option>
+            <option value="Cash">Gotówka</option>
+            <option value="CashOnDelivery">Za pobraniem</option>
+            <option value="CreditCard">Karta</option>
+            <option value="ElectronicPayment">Płatność el.</option>
+        </select>
+    </div>
+
+    <div class="col-md-12">
+        <label class="form-label">Notatka</label>
+        <textarea class="form-control" @bind="form.Note" rows="2"></textarea>
+    </div>
+
+    <div class="col-12 d-flex gap-2 mt-3 mb-5">
+        <button type="button" class="btn btn-primary" @onclick="Save" disabled="@saving">
+            @(saving ? "Zapisywanie..." : "Zapisz zmiany")
+        </button>
+        <a href="/" class="btn btn-outline-secondary">Wróć do listy</a>
+    </div>
+</div>
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+
+    private ClientForm? form;
+    private string? etag;
+    private bool loading = true;
+    private bool saving;
+    private string? error;
+    private string? success;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!Sdk.IsAuthorized) { loading = false; return; }
+        try
+        {
+            var (client, e) = await Sdk.Clients.GetWithEtagAsync(Id);
+            etag = e;
+            form = new ClientForm
+            {
+                Name = client.Name ?? "",
+                Kind = client.Kind?.ToString() ?? "Company",
+                Tin = client.Tin ?? "",
+                TinKind = client.TinKind?.ToString() ?? "",
+                Group = client.Group ?? "",
+                Favourite = client.Favourite ?? false,
+                Street = client.Address?.Line1 ?? "",
+                ZipCode = client.Address?.ZipCode ?? "",
+                City = client.Address?.City ?? "",
+                Country = client.Address?.Country ?? "PL",
+                DelStreet = client.DeliveryAddress?.Line1 ?? "",
+                DelZipCode = client.DeliveryAddress?.ZipCode ?? "",
+                DelCity = client.DeliveryAddress?.City ?? "",
+                DelCountry = client.DeliveryAddress?.Country ?? "",
+                Phone1 = client.Phone1 ?? "",
+                Phone2 = client.Phone2 ?? "",
+                Email = client.Emails?.FirstOrDefault() ?? "",
+                Skype = client.Skype ?? "",
+                Website = client.Website ?? "",
+                DefaultDiscount = client.DefaultDiscount,
+                DefaultDueDate = client.DefaultDueDate,
+                DefaultPaymentMethod = client.DefaultPaymentMethod?.ToString() ?? "",
+                Note = client.Note ?? ""
+            };
+        }
+        catch (Exception ex) { error = ex.Message; }
+        finally { loading = false; }
+    }
+
+    private async Task Save()
+    {
+        if (form is null || string.IsNullOrWhiteSpace(form.Name)) { error = "Nazwa jest wymagana."; return; }
+        if (etag is null) { error = "Brak ETag — nie można zapisać. Odśwież stronę."; return; }
+        if (!string.IsNullOrWhiteSpace(form.Tin) && string.IsNullOrWhiteSpace(form.TinKind))
+        { error = "Wybierz typ identyfikatora (NIP/PESEL/VATIN) gdy podany jest numer."; return; }
+
+        saving = true;
+        error = null;
+        success = null;
+        StateHasChanged();
+        try
+        {
+            var kind = Enum.TryParse<ClientKind>(form.Kind, out var ck) ? ck : (ClientKind?)null;
+            var tinKind = Enum.TryParse<TinKind>(form.TinKind, out var tk) ? tk
+                : (kind == ClientKind.Person ? TinKind.Pesel : TinKind.Nip);
+            var tin = NullIfEmpty(form.Tin);
+            var payMethod = Enum.TryParse<PaymentMethod>(form.DefaultPaymentMethod, out var pm) ? pm : (PaymentMethod?)null;
+
+            var address = HasValue(form.Street, form.City)
+                ? new AddressDto(Country: OrDefault(form.Country, "PL"), Line1: NullIfEmpty(form.Street), City: NullIfEmpty(form.City), ZipCode: NullIfEmpty(form.ZipCode))
+                : null;
+            var delAddr = HasValue(form.DelStreet, form.DelCity)
+                ? new AddressDto(Country: OrDefault(form.DelCountry, "PL"), Line1: NullIfEmpty(form.DelStreet), City: NullIfEmpty(form.DelCity), ZipCode: NullIfEmpty(form.DelZipCode))
+                : null;
+            var emails = !string.IsNullOrWhiteSpace(form.Email) ? new List<string> { form.Email } : null;
+
+            var dto = new UpdateClientDto(
+                Name: form.Name,
+                Kind: kind,
+                Tin: tin,
+                TinKind: tinKind,
+                Group: NullIfEmpty(form.Group),
+                Favourite: form.Favourite,
+                Address: address,
+                DeliveryAddress: delAddr,
+                Phone1: NullIfEmpty(form.Phone1),
+                Phone2: NullIfEmpty(form.Phone2),
+                Emails: emails,
+                Skype: NullIfEmpty(form.Skype),
+                Website: NullIfEmpty(form.Website),
+                DefaultDiscount: form.DefaultDiscount,
+                DefaultDueDate: form.DefaultDueDate,
+                DefaultPaymentMethod: payMethod,
+                Note: NullIfEmpty(form.Note)
+            );
+
+            await Sdk.Clients.UpdateAsync(Id, dto, etag);
+
+            // Refresh ETag
+            var (_, newEtag) = await Sdk.Clients.GetWithEtagAsync(Id);
+            etag = newEtag;
+            success = "Zmiany zapisane.";
+        }
+        catch (Exception ex) { error = ex.Message; }
+        finally { saving = false; }
+    }
+
+    private static string? NullIfEmpty(string? s) => string.IsNullOrWhiteSpace(s) ? null : s;
+    private static string OrDefault(string? s, string def) => string.IsNullOrWhiteSpace(s) ? def : s;
+    private static bool HasValue(params string?[] values) => values.Any(v => !string.IsNullOrWhiteSpace(v));
+
+    private class ClientForm
+    {
+        public string Name { get; set; } = "";
+        public string Kind { get; set; } = "Company";
+        public string Tin { get; set; } = "";
+        public string TinKind { get; set; } = "";
+        public string Group { get; set; } = "";
+        public bool Favourite { get; set; }
+        public string Street { get; set; } = "";
+        public string ZipCode { get; set; } = "";
+        public string City { get; set; } = "";
+        public string Country { get; set; } = "PL";
+        public string DelStreet { get; set; } = "";
+        public string DelZipCode { get; set; } = "";
+        public string DelCity { get; set; } = "";
+        public string DelCountry { get; set; } = "";
+        public string Phone1 { get; set; } = "";
+        public string Phone2 { get; set; } = "";
+        public string Email { get; set; } = "";
+        public string Skype { get; set; } = "";
+        public string Website { get; set; } = "";
+        public decimal? DefaultDiscount { get; set; }
+        public int? DefaultDueDate { get; set; }
+        public string DefaultPaymentMethod { get; set; } = "";
+        public string Note { get; set; } = "";
+    }
+}

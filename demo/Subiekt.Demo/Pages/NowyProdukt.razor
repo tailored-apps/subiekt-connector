@@ -1,0 +1,152 @@
+@page "/produkty/nowy"
+@using Subiekt.Connector.Sdk
+@using Subiekt.Connector.Contracts
+@inject SubiektClient Sdk
+@inject NavigationManager Nav
+
+<h3>Nowy produkt</h3>
+
+@if (!Sdk.IsAuthorized)
+{
+    <div class="alert alert-warning">
+        Nie jesteś zalogowany. <a href="auth">Przejdź do autoryzacji</a>
+    </div>
+    return;
+}
+
+@if (success is not null)
+{
+    <div class="alert alert-success">
+        @success
+        <a href="/produkty" class="ms-2">Wróć do listy</a>
+    </div>
+    return;
+}
+
+@if (error is not null)
+{
+    <div class="alert alert-danger">@error</div>
+}
+
+<EditForm Model="form" OnValidSubmit="Submit" FormName="newProduct">
+    <div class="row g-3">
+        <div class="col-md-6">
+            <label class="form-label">Nazwa *</label>
+            <InputText class="form-control" @bind-Value="form.Name" />
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">Symbol</label>
+            <InputText class="form-control" @bind-Value="form.Symbol" />
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">Rodzaj</label>
+            <InputSelect class="form-select" @bind-Value="form.Kind">
+                <option value="Good">Towar</option>
+                <option value="Service">Usługa</option>
+            </InputSelect>
+        </div>
+
+        <div class="col-md-3">
+            <label class="form-label">Jednostka *</label>
+            <InputText class="form-control" @bind-Value="form.Unit" />
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">Stawka VAT * (np. 23, 8, 0, zw)</label>
+            <InputText class="form-control" @bind-Value="form.VatRate" />
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">Cena netto (PLN)</label>
+            <InputNumber class="form-control" @bind-Value="form.NetPrice" />
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">Cena brutto (PLN)</label>
+            <InputNumber class="form-control" @bind-Value="form.GrossPrice" />
+        </div>
+
+        <div class="col-md-4">
+            <label class="form-label">Grupa</label>
+            <InputText class="form-control" @bind-Value="form.Group" />
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Kod kreskowy</label>
+            <InputText class="form-control" @bind-Value="form.Barcode" />
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">PKWiU</label>
+            <InputText class="form-control" @bind-Value="form.Pkwiu" />
+        </div>
+
+        <div class="col-md-12">
+            <label class="form-label">Opis</label>
+            <InputTextArea class="form-control" @bind-Value="form.Description" rows="2" />
+        </div>
+
+        <div class="col-12 d-flex gap-2 mt-3">
+            <button type="submit" class="btn btn-primary" disabled="@saving">
+                @(saving ? "Zapisywanie..." : "Utwórz produkt")
+            </button>
+            <a href="/produkty" class="btn btn-outline-secondary">Anuluj</a>
+        </div>
+    </div>
+</EditForm>
+
+@code {
+    private ProductForm form = new();
+    private bool saving;
+    private string? error;
+    private string? success;
+
+    private async Task Submit()
+    {
+        if (string.IsNullOrWhiteSpace(form.Name) || string.IsNullOrWhiteSpace(form.Unit) || string.IsNullOrWhiteSpace(form.VatRate))
+        {
+            error = "Nazwa, jednostka i stawka VAT są wymagane.";
+            return;
+        }
+
+        saving = true;
+        error = null;
+        StateHasChanged();
+        try
+        {
+            var kind = Enum.TryParse<ProductKind>(form.Kind, out var pk) ? pk : (ProductKind?)null;
+
+            List<PriceDto>? prices = null;
+            if (form.NetPrice.HasValue || form.GrossPrice.HasValue)
+                prices = [new PriceDto(Currency: "PLN", Net: form.NetPrice, Gross: form.GrossPrice)];
+
+            var dto = new CreateProductDto(
+                Name: form.Name,
+                Unit: form.Unit,
+                VatRate: form.VatRate,
+                Kind: kind,
+                Symbol: string.IsNullOrWhiteSpace(form.Symbol) ? null : form.Symbol,
+                Group: string.IsNullOrWhiteSpace(form.Group) ? null : form.Group,
+                Barcode: string.IsNullOrWhiteSpace(form.Barcode) ? null : form.Barcode,
+                Pkwiu: string.IsNullOrWhiteSpace(form.Pkwiu) ? null : form.Pkwiu,
+                Description: string.IsNullOrWhiteSpace(form.Description) ? null : form.Description,
+                Price: prices
+            );
+
+            var result = await Sdk.Products.CreateAsync(dto);
+            success = $"Produkt utworzony. ID: {result.Id?.Value}";
+        }
+        catch (Exception ex) { error = ex.Message; }
+        finally { saving = false; }
+    }
+
+    private class ProductForm
+    {
+        public string Name { get; set; } = "";
+        public string Symbol { get; set; } = "";
+        public string Kind { get; set; } = "Good";
+        public string Unit { get; set; } = "szt";
+        public string VatRate { get; set; } = "23";
+        public decimal? NetPrice { get; set; }
+        public decimal? GrossPrice { get; set; }
+        public string Group { get; set; } = "";
+        public string Barcode { get; set; } = "";
+        public string Pkwiu { get; set; } = "";
+        public string Description { get; set; } = "";
+    }
+}

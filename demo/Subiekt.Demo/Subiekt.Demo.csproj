@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>7906263d-eaf0-4298-b460-f32b4ad81833</UserSecretsId>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../src/Subiekt.Connector.Sdk/Subiekt.Connector.Sdk.csproj" />
+  </ItemGroup>
+</Project>

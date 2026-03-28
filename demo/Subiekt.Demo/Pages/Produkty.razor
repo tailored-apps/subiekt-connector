@@ -1,0 +1,163 @@
+@page "/produkty"
+@using Subiekt.Connector.Sdk
+@using Subiekt.Connector.Contracts
+@inject SubiektClient Sdk
+
+<h3>Produkty</h3>
+
+@if (!Sdk.IsAuthorized)
+{
+    <div class="alert alert-warning">
+        Nie jesteś zalogowany. <a href="auth">Przejdź do autoryzacji →</a>
+    </div>
+    return;
+}
+
+<div class="row mb-3 g-2">
+    <div class="col-md-3">
+        <input class="form-control" placeholder="Nazwa..." @bind="filterName" />
+    </div>
+    <div class="col-md-2">
+        <select class="form-select" @bind="filterKind">
+            <option value="">Wszystkie rodzaje</option>
+            <option value="Good">Towar</option>
+            <option value="Service">Usługa</option>
+        </select>
+    </div>
+    <div class="col-md-2">
+        <input class="form-control" placeholder="Grupa..." @bind="filterGroup" />
+    </div>
+    <div class="col-md-2">
+        <select class="form-select" @bind="sortBy">
+            <option value="">Domyślne</option>
+            <option value="name:asc">Nazwa A-Z</option>
+            <option value="name:desc">Nazwa Z-A</option>
+        </select>
+    </div>
+    <div class="col-md-3 d-flex gap-2">
+        <button class="btn btn-primary flex-grow-1" @onclick="Search" disabled="@loading">Szukaj</button>
+        <button class="btn btn-outline-secondary" @onclick="ClearFilters" disabled="@loading">Wyczyść</button>
+    </div>
+</div>
+
+@if (loading)
+{
+    <p><span class="spinner-border spinner-border-sm"></span> Ładowanie...</p>
+}
+else if (error is not null)
+{
+    <div class="alert alert-danger">
+        <strong>Błąd:</strong> @error
+        <button class="btn btn-sm btn-outline-danger ms-2" @onclick="Search">Ponów</button>
+    </div>
+}
+else
+{
+    <p class="text-muted small">Wyświetlono @products.Count z @totalItems</p>
+    <table class="table table-striped table-sm">
+        <thead>
+            <tr>
+                <th>Nazwa</th>
+                <th>Symbol</th>
+                <th>Rodzaj</th>
+                <th>Grupa</th>
+                <th>Jednostka</th>
+                <th>Cena netto</th>
+                <th>Cena brutto</th>
+                <th>Stawka VAT</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var p in products)
+            {
+                <tr>
+                    <td><a href="produkty/@p.Id">@p.Name</a></td>
+                    <td><code>@p.Symbol</code></td>
+                    <td>@(p.Kind == ProductKind.Good ? "Towar" : "Usługa")</td>
+                    <td>@p.Group</td>
+                    <td>@p.Unit</td>
+                    <td class="text-end">@(p.NetPrice?.ToString("N2") ?? "-") @p.Currency</td>
+                    <td class="text-end">@(p.GrossPrice?.ToString("N2") ?? "-") @p.Currency</td>
+                    <td>@p.VatRate</td>
+                    <td><a href="produkty/@p.Id" class="btn btn-outline-primary btn-sm">Edytuj</a></td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    @if (products.Count == 0)
+    {
+        <p class="text-muted">Brak produktów.</p>
+    }
+    else if (products.Count < totalItems)
+    {
+        <button class="btn btn-outline-secondary btn-sm" @onclick="LoadMore">Załaduj więcej</button>
+    }
+}
+
+@code {
+    private List<ProductListItemDto> products = [];
+    private int totalItems;
+    private bool loading = true;
+    private string? error;
+    private string filterName = "";
+    private string filterKind = "";
+    private string filterGroup = "";
+    private string sortBy = "";
+    private int page = 0;
+    private const int PageSize = 25;
+
+    protected override async Task OnInitializedAsync() => await LoadPage();
+
+    private async Task Search()
+    {
+        page = 0;
+        products = [];
+        await LoadPage();
+    }
+
+    private async Task ClearFilters()
+    {
+        filterName = "";
+        filterKind = "";
+        filterGroup = "";
+        sortBy = "";
+        await Search();
+    }
+
+    private async Task LoadMore()
+    {
+        page++;
+        await LoadPage();
+    }
+
+    private async Task LoadPage()
+    {
+        loading = true;
+        error = null;
+        StateHasChanged();
+        try
+        {
+            var filters = BuildFilters();
+            var order = string.IsNullOrEmpty(sortBy) ? null : new[] { sortBy };
+            var result = await Sdk.Products.ListAsync(page, PageSize, filters.Length > 0 ? filters : null, order);
+            totalItems = result.TotalItemsCount;
+            if (page == 0)
+                products = result.Items ?? [];
+            else
+                products.AddRange(result.Items ?? []);
+        }
+        catch (Exception ex) { error = ex.Message; }
+        finally { loading = false; }
+    }
+
+    private string[] BuildFilters()
+    {
+        var f = new List<string>();
+        if (!string.IsNullOrEmpty(filterName)) f.Add($"name~{filterName}");
+        if (!string.IsNullOrEmpty(filterKind)) f.Add($"kind={filterKind}");
+        if (!string.IsNullOrEmpty(filterGroup)) f.Add($"group~{filterGroup}");
+        return f.ToArray();
+    }
+}

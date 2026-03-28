@@ -1,0 +1,751 @@
+@page "/dokumenty/nowy"
+@using Subiekt.Connector.Sdk
+@using Subiekt.Connector.Contracts
+@inject SubiektClient Sdk
+@inject NavigationManager Nav
+
+<h3>Nowy dokument</h3>
+
+@if (!Sdk.IsAuthorized)
+{
+    <div class="alert alert-warning">Nie jesteś zalogowany. <a href="auth">Przejdź do autoryzacji</a></div>
+    return;
+}
+
+@if (success is not null)
+{
+    <div class="alert alert-success">@success <a href="/dokumenty" class="ms-2">Wróć do listy</a></div>
+    return;
+}
+
+@if (error is not null)
+{
+    <div class="alert alert-danger">@error</div>
+}
+
+<div class="row g-3">
+    @* ── Główne ── *@
+    <div class="col-md-3">
+        <label class="form-label">Rodzaj *</label>
+        <select class="form-select" @bind="form.Kind">
+            <option value="Invoice">Faktura</option>
+            <option value="Receipt">Paragon</option>
+            <option value="Proforma">Proforma</option>
+        </select>
+    </div>
+    <div class="col-md-3">
+        <label class="form-label">Waluta *</label>
+        <input class="form-control" @bind="form.Currency" />
+    </div>
+    <div class="col-md-3">
+        <label class="form-label">Wystawca *</label>
+        <input class="form-control" @bind="form.Issuer" />
+    </div>
+    <div class="col-md-3">
+        <label class="form-label">Odbiorca</label>
+        <input class="form-control" @bind="form.Recipient" />
+    </div>
+
+    @* ── Daty ── *@
+    <div class="col-md-3">
+        <label class="form-label">Data wystawienia</label>
+        <input class="form-control" type="date" @bind="form.IssueDate" />
+    </div>
+    <div class="col-md-3">
+        <label class="form-label">Data dostawy</label>
+        <input class="form-control" type="date" @bind="form.DeliveryDate" />
+    </div>
+    <div class="col-md-3">
+        <label class="form-label">Termin płatności</label>
+        <input class="form-control" type="date" @bind="form.DueDate" />
+    </div>
+    <div class="col-md-3">
+        <label class="form-label">Data zamówienia</label>
+        <input class="form-control" type="date" @bind="form.OrderDate" />
+    </div>
+    <div class="col-md-3">
+        <label class="form-label">Data obow. podatkowego</label>
+        <input class="form-control" type="date" @bind="form.TaxLiabilityDate" />
+    </div>
+    <div class="col-md-3">
+        <label class="form-label">Opis terminu płatności</label>
+        <input class="form-control" @bind="form.DueDateDescription" />
+    </div>
+
+    @* ── Ustawienia ── *@
+    <div class="col-md-2">
+        <label class="form-label">Metoda płatności</label>
+        <select class="form-select" @bind="form.PaymentMethod">
+            <option value="BankTransfer">Przelew</option>
+            <option value="Cash">Gotówka</option>
+            <option value="CashOnDelivery">Za pobraniem</option>
+            <option value="CreditCard">Karta</option>
+            <option value="ElectronicPayment">Płatność el.</option>
+            <option value="Setoff">Kompensata</option>
+        </select>
+    </div>
+    <div class="col-md-2">
+        <label class="form-label">Kalkulacja</label>
+        <select class="form-select" @bind="form.CalculationMethod">
+            <option value="Net">Netto</option>
+            <option value="Gross">Brutto</option>
+        </select>
+    </div>
+    <div class="col-md-2">
+        <label class="form-label">Transakcja</label>
+        <select class="form-select" @bind="form.CommunityTransaction">
+            <option value="SK">Krajowa (SK)</option>
+            <option value="SUPTK">SUPTK</option>
+            <option value="OO">OO</option>
+            <option value="WDT">WDT</option>
+            <option value="ET">ET</option>
+            <option value="DPTK">DPTK</option>
+            <option value="WSTO_OSS">WSTO OSS</option>
+            <option value="WSTO_SK">WSTO SK</option>
+        </select>
+    </div>
+    <div class="col-md-2">
+        <label class="form-label">Split payment</label>
+        <select class="form-select" @bind="form.SplitPayment">
+            <option value="">--</option>
+            <option value="False">Nie</option>
+            <option value="True">Tak</option>
+            <option value="ManualTrue">Ręcznie tak</option>
+        </select>
+    </div>
+    <div class="col-md-2">
+        <label class="form-label">Miejsce transakcji</label>
+        <input class="form-control" @bind="form.TransactionLocation" />
+    </div>
+
+    @* ── Flagi ── *@
+    <div class="col-md-2 d-flex flex-column gap-2 pt-4">
+        <div class="form-check">
+            <input class="form-check-input" type="checkbox" @bind="form.CashBasis" id="cashBasis" />
+            <label class="form-check-label" for="cashBasis">Metoda kasowa</label>
+        </div>
+        <div class="form-check">
+            <input class="form-check-input" type="checkbox" @bind="form.EInvoice" id="eInvoice" />
+            <label class="form-check-label" for="eInvoice">e-Faktura</label>
+        </div>
+    </div>
+
+    @* ── Kurs waluty ── *@
+    @if (form.Currency != "PLN")
+    {
+        <div class="col-12"><h6>Kurs waluty</h6></div>
+        <div class="col-md-3">
+            <label class="form-label">Kurs</label>
+            <input class="form-control" type="number" step="0.0001" @bind="form.ExchangeRate" />
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">Jednostka kursu</label>
+            <input class="form-control" type="number" @bind="form.ExchangeRateUnit" />
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">Nr tabeli NBP</label>
+            <input class="form-control" @bind="form.ExchangeRateTableNo" />
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">Data kursu</label>
+            <input class="form-control" type="date" @bind="form.ExchangeRateDate" />
+        </div>
+    }
+
+    @* ── Konto bankowe ── *@
+    <div class="col-12"><hr /><h5>Konto bankowe</h5></div>
+    <div class="col-md-4">
+        <label class="form-label">Nazwa banku</label>
+        <input class="form-control" @bind="form.BankAccountName" />
+    </div>
+    <div class="col-md-4">
+        <label class="form-label">Numer konta</label>
+        <input class="form-control" @bind="form.BankAccountNumber" />
+    </div>
+    @if (form.Currency != "PLN")
+    {
+        <div class="col-md-2">
+            <label class="form-label">Nazwa banku PLN</label>
+            <input class="form-control" @bind="form.BankAccountPlnName" />
+        </div>
+        <div class="col-md-2">
+            <label class="form-label">Nr konta PLN</label>
+            <input class="form-control" @bind="form.BankAccountPlnNumber" />
+        </div>
+    }
+
+    @* ── Klient ── *@
+    <div class="col-12"><hr /><h5>Klient (nabywca)</h5></div>
+
+    <div class="col-md-5">
+        <label class="form-label">Szukaj klienta (nazwa lub NIP)</label>
+        <input class="form-control" placeholder="Wpisz min. 2 znaki..." @bind="clientSearch" @bind:after="SearchClients" />
+    </div>
+    <div class="col-md-5">
+        <label class="form-label">Wybierz z wyników</label>
+        <select class="form-select" @bind="selectedClientId" @bind:after="OnClientSelected">
+            <option value="">-- wpisz ręcznie poniżej --</option>
+            @foreach (var c in availableClients)
+            {
+                <option value="@c.Id">@c.Name (@c.Tin)</option>
+            }
+        </select>
+    </div>
+    <div class="col-md-2 pt-4">
+        @if (clientsLoading) { <span class="spinner-border spinner-border-sm"></span> }
+        else if (clientsLoadError is not null) { <small class="text-danger">@clientsLoadError</small> }
+        else { <small class="text-muted">@availableClients.Count wyników</small> }
+    </div>
+
+    @if (string.IsNullOrEmpty(selectedClientId))
+    {
+        <div class="col-md-4">
+            <label class="form-label">Nazwa klienta</label>
+            <input class="form-control" @bind="form.ClientName" />
+        </div>
+        <div class="col-md-2">
+            <label class="form-label">NIP</label>
+            <input class="form-control" @bind="form.ClientTin" />
+        </div>
+        <div class="col-md-2">
+            <label class="form-label">Typ NIP</label>
+            <select class="form-select" @bind="form.ClientTinKind">
+                <option value="">--</option>
+                <option value="Nip">NIP</option>
+                <option value="Vatin">VATIN</option>
+                <option value="Pesel">PESEL</option>
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label class="form-label">Rodzaj</label>
+            <select class="form-select" @bind="form.ClientKind">
+                <option value="Company">Firma</option>
+                <option value="Person">Osoba</option>
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label class="form-label">Ulica</label>
+            <input class="form-control" @bind="form.ClientStreet" />
+        </div>
+        <div class="col-md-2">
+            <label class="form-label">Miasto</label>
+            <input class="form-control" @bind="form.ClientCity" />
+        </div>
+        <div class="col-md-2">
+            <label class="form-label">Kod poczt.</label>
+            <input class="form-control" @bind="form.ClientZipCode" />
+        </div>
+        <div class="col-md-2">
+            <label class="form-label">Kraj</label>
+            <input class="form-control" @bind="form.ClientCountry" />
+        </div>
+    }
+    else
+    {
+        <div class="col-md-8">
+            <div class="alert alert-info py-2 mb-0">Wybrany: <strong>@form.ClientName</strong> (NIP: @form.ClientTin)</div>
+        </div>
+    }
+
+    @* ── Kupujący (buyer) ── *@
+    <div class="col-12"><h6>Kupujący (jeśli inny niż klient)</h6></div>
+    <div class="col-md-4">
+        <label class="form-label">Nazwa kupującego</label>
+        <input class="form-control" @bind="form.BuyerName" />
+    </div>
+    <div class="col-md-2">
+        <label class="form-label">NIP kupującego</label>
+        <input class="form-control" @bind="form.BuyerTin" />
+    </div>
+
+    @* ── Adres dostawy ── *@
+    <div class="col-12"><h6>Adres dostawy (jeśli inny)</h6></div>
+    <div class="col-md-3">
+        <label class="form-label">Ulica</label>
+        <input class="form-control" @bind="form.DeliveryStreet" />
+    </div>
+    <div class="col-md-3">
+        <label class="form-label">Miasto</label>
+        <input class="form-control" @bind="form.DeliveryCity" />
+    </div>
+    <div class="col-md-2">
+        <label class="form-label">Kod poczt.</label>
+        <input class="form-control" @bind="form.DeliveryZipCode" />
+    </div>
+    <div class="col-md-2">
+        <label class="form-label">Kraj</label>
+        <input class="form-control" @bind="form.DeliveryCountry" />
+    </div>
+
+    @* ── Pozycje ── *@
+    <div class="col-12"><hr /><h5>Pozycje</h5></div>
+
+    @for (int i = 0; i < form.Items.Count; i++)
+    {
+        var idx = i;
+        <div class="card p-2 mb-2">
+            <div class="row g-2 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label">Nazwa produktu * (poz. @(idx + 1))</label>
+                    <input class="form-control" @bind="form.Items[idx].ProductName" />
+                </div>
+                <div class="col-md-1">
+                    <label class="form-label">Ilość *</label>
+                    <input class="form-control" type="number" step="any" @bind="form.Items[idx].Quantity" />
+                </div>
+                <div class="col-md-1">
+                    <label class="form-label">Jedn. *</label>
+                    <input class="form-control" @bind="form.Items[idx].Unit" />
+                </div>
+                <div class="col-md-1">
+                    <label class="form-label">Cena netto *</label>
+                    <input class="form-control" type="number" step="0.01" @bind="form.Items[idx].NetPrice" />
+                </div>
+                <div class="col-md-1">
+                    <label class="form-label">Cena brutto</label>
+                    <input class="form-control" type="number" step="0.01" @bind="form.Items[idx].GrossPrice" />
+                </div>
+                <div class="col-md-1">
+                    <label class="form-label">VAT *</label>
+                    <input class="form-control" @bind="form.Items[idx].VatRate" />
+                </div>
+                <div class="col-md-1">
+                    <label class="form-label">Rabat</label>
+                    <input class="form-control" type="number" step="0.01" @bind="form.Items[idx].Discount" />
+                </div>
+                <div class="col-md-1">
+                    <label class="form-label">Typ rabatu</label>
+                    <select class="form-select" @bind="form.Items[idx].DiscountKind">
+                        <option value="">--</option>
+                        <option value="Percentage">%</option>
+                        <option value="Quota">Kwota</option>
+                    </select>
+                </div>
+                <div class="col-md-1">
+                    @if (form.Items.Count > 1)
+                    {
+                        <button type="button" class="btn btn-outline-danger btn-sm" @onclick="() => RemoveItem(idx)">X</button>
+                    }
+                </div>
+            </div>
+            <div class="row g-2 mt-1">
+                <div class="col-md-2">
+                    <label class="form-label">Symbol</label>
+                    <input class="form-control form-control-sm" @bind="form.Items[idx].Symbol" />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Kod kreskowy</label>
+                    <input class="form-control form-control-sm" @bind="form.Items[idx].Barcode" />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">PKWiU</label>
+                    <input class="form-control form-control-sm" @bind="form.Items[idx].Pkwiu" />
+                </div>
+                <div class="col-md-1">
+                    <label class="form-label">CN</label>
+                    <input class="form-control form-control-sm" @bind="form.Items[idx].CnCode" />
+                </div>
+                <div class="col-md-1">
+                    <label class="form-label">GTU</label>
+                    <input class="form-control form-control-sm" @bind="form.Items[idx].Gtu" />
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Uwagi do pozycji</label>
+                    <input class="form-control form-control-sm" @bind="form.Items[idx].Note" />
+                </div>
+            </div>
+        </div>
+    }
+    <div class="col-12">
+        <button type="button" class="btn btn-outline-success btn-sm" @onclick="AddItem">+ Dodaj pozycję</button>
+    </div>
+
+    @* ── Płatności ── *@
+    <div class="col-12"><hr /><h5>Płatności</h5></div>
+    @for (int i = 0; i < form.Payments.Count; i++)
+    {
+        var idx = i;
+        <div class="row g-2 mb-2">
+            <div class="col-md-3">
+                <label class="form-label">Data płatności</label>
+                <input class="form-control" type="date" @bind="form.Payments[idx].Date" />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Kwota</label>
+                <input class="form-control" type="number" step="0.01" @bind="form.Payments[idx].Value" />
+            </div>
+            <div class="col-md-3 pt-4">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" @bind="form.Payments[idx].OnDocument" />
+                    <label class="form-check-label">Na dokumencie</label>
+                </div>
+            </div>
+            <div class="col-md-1">
+                @if (form.Payments.Count > 1)
+                {
+                    <button type="button" class="btn btn-outline-danger btn-sm mt-4" @onclick="() => form.Payments.RemoveAt(idx)">X</button>
+                }
+            </div>
+        </div>
+    }
+    <div class="col-12">
+        <button type="button" class="btn btn-outline-success btn-sm" @onclick="() => form.Payments.Add(new PaymentForm())">+ Dodaj płatność</button>
+        <button type="button" class="btn btn-outline-info btn-sm ms-2" @onclick="AutoFillPayment">Uzupełnij automatycznie</button>
+    </div>
+
+    @* ── Zwolnienie z VAT ── *@
+    <div class="col-12"><hr /><h5>Dodatkowe</h5></div>
+    <div class="col-md-3">
+        <label class="form-label">Zwolnienie z VAT</label>
+        <select class="form-select" @bind="form.VatReleaseReason">
+            <option value="">--</option>
+            <option value="Art113Ustep1i9UstawyOVat">Art. 113 ust. 1 i 9</option>
+            <option value="Art49Ustep1i9UstawyOVat">Art. 49 ust. 1 i 9</option>
+            <option value="Art82Ustep3UstawyOVat">Art. 82 ust. 3</option>
+            <option value="Custom">Własny powód</option>
+        </select>
+    </div>
+    <div class="col-md-3">
+        <label class="form-label">Własny powód zwolnienia</label>
+        <input class="form-control" @bind="form.CustomVatReleaseReason" />
+    </div>
+    <div class="col-md-3">
+        <label class="form-label">Grupy JPK VAT (przecinki)</label>
+        <input class="form-control" @bind="form.JpkVatGroups" />
+    </div>
+
+    @* ── WSTO ── *@
+    <div class="col-md-3">
+        <label class="form-label">WSTO kraj konsumenta</label>
+        <input class="form-control" @bind="form.WstoConsumerCountry" />
+    </div>
+    <div class="col-md-3">
+        <label class="form-label">WSTO kraj wysyłki</label>
+        <input class="form-control" @bind="form.WstoShipmentCountry" />
+    </div>
+    <div class="col-md-6">
+        <label class="form-label">WSTO info dodatkowe</label>
+        <input class="form-control" @bind="form.WstoAdditionalInformation" />
+    </div>
+
+    <div class="col-md-12">
+        <label class="form-label">Notatka</label>
+        <textarea class="form-control" @bind="form.Note" rows="2"></textarea>
+    </div>
+
+    @* ── Przyciski ── *@
+    <div class="col-12 d-flex gap-2 mt-3 mb-5">
+        <button type="button" class="btn btn-primary" @onclick="Submit" disabled="@saving">
+            @(saving ? "Zapisywanie..." : "Utwórz dokument")
+        </button>
+        <a href="/dokumenty" class="btn btn-outline-secondary">Anuluj</a>
+    </div>
+</div>
+
+@code {
+    private DocumentForm form = new();
+    private List<ClientListItemDto> availableClients = [];
+    private string clientSearch = "";
+    private string selectedClientId = "";
+    private bool clientsLoading;
+    private string? clientsLoadError;
+    private bool saving;
+    private string? error;
+    private string? success;
+
+    private async Task SearchClients()
+    {
+        if (!Sdk.IsAuthorized || clientSearch.Length < 2)
+        {
+            availableClients = [];
+            return;
+        }
+
+        clientsLoading = true;
+        clientsLoadError = null;
+        StateHasChanged();
+        try
+        {
+            var filters = new[] { $"name~{clientSearch}" };
+            var result = await Sdk.Clients.ListAsync(0, 50, filters);
+            availableClients = result.Items ?? [];
+        }
+        catch (Exception ex)
+        {
+            clientsLoadError = ex.Message;
+            availableClients = [];
+        }
+        finally { clientsLoading = false; }
+    }
+
+    private void OnClientSelected()
+    {
+        if (string.IsNullOrEmpty(selectedClientId))
+        {
+            form.ClientName = ""; form.ClientTin = ""; form.ClientKind = "Company";
+            return;
+        }
+        var c = availableClients.FirstOrDefault(x => x.Id.ToString() == selectedClientId);
+        if (c is null) return;
+        form.ClientName = c.Name ?? "";
+        form.ClientTin = c.Tin ?? "";
+        form.ClientKind = c.Kind?.ToString() ?? "Company";
+    }
+
+    private void AddItem() => form.Items.Add(new ItemForm());
+    private void RemoveItem(int idx) => form.Items.RemoveAt(idx);
+
+    private void AutoFillPayment()
+    {
+        var total = form.Items.Sum(i => (i.NetPrice ?? 0) * (i.Quantity ?? 1));
+        if (total <= 0) return;
+        form.Payments = [new PaymentForm { Date = form.DueDate ?? form.IssueDate, Value = total, OnDocument = true }];
+    }
+
+    private async Task Submit()
+    {
+        error = null;
+        if (string.IsNullOrWhiteSpace(form.Currency)) { error = "Waluta jest wymagana."; return; }
+        if (string.IsNullOrWhiteSpace(form.Issuer)) { error = "Wystawca jest wymagany."; return; }
+        if (!form.Items.Any(i => !string.IsNullOrWhiteSpace(i.ProductName))) { error = "Dodaj co najmniej jedną pozycję."; return; }
+        if (form.Items.Any(i => !string.IsNullOrWhiteSpace(i.ProductName) && (i.NetPrice is null || i.NetPrice <= 0)))
+        { error = "Każda pozycja musi mieć cenę netto > 0."; return; }
+        if (!form.Payments.Any(p => p.Value > 0)) { error = "Dodaj co najmniej jedną płatność > 0 (lub kliknij 'Uzupełnij automatycznie')."; return; }
+        if (!string.IsNullOrWhiteSpace(form.ClientTinKind) && string.IsNullOrWhiteSpace(form.ClientTin))
+        { error = "Podaj numer identyfikacyjny (NIP/PESEL/VATIN) gdy wybrany jest typ identyfikatora."; return; }
+
+        saving = true;
+        StateHasChanged();
+        try
+        {
+            var kind = Enum.TryParse<DocumentKind>(form.Kind, out var dk) ? dk : (DocumentKind?)null;
+            var payMethod = Enum.TryParse<PaymentMethod>(form.PaymentMethod, out var pm) ? pm : PaymentMethod.BankTransfer;
+            var calcMethod = Enum.TryParse<CalculationMethod>(form.CalculationMethod, out var cm) ? cm : CalculationMethod.Net;
+            var commTrans = Enum.TryParse<CommunityTransaction>(form.CommunityTransaction, out var ct2) ? ct2 : CommunityTransaction.SK;
+            var splitPay = Enum.TryParse<SplitPayment>(form.SplitPayment, out var sp) ? sp : (SplitPayment?)null;
+            var vatRelease = Enum.TryParse<VatReleaseReason>(form.VatReleaseReason, out var vr) ? vr : (VatReleaseReason?)null;
+
+            // Client
+            DocumentCreateClientDto? client;
+            if (!string.IsNullOrEmpty(selectedClientId) && Guid.TryParse(selectedClientId, out var clientGuid))
+            {
+                var selCk = Enum.TryParse<DocumentClientKind>(form.ClientKind, out var selParsed) ? selParsed : DocumentClientKind.Company;
+                client = new DocumentCreateClientDto(
+                    SourceClientId: clientGuid,
+                    Name: form.ClientName,
+                    Kind: selCk,
+                    Tin: NullIfEmpty(form.ClientTin));
+            }
+            else if (!string.IsNullOrWhiteSpace(form.ClientName))
+            {
+                var ck = Enum.TryParse<DocumentClientKind>(form.ClientKind, out var parsed) ? parsed : (DocumentClientKind?)null;
+                var tinKind = Enum.TryParse<TinKind>(form.ClientTinKind, out var tk) ? tk : (TinKind?)null;
+                var addr = HasValue(form.ClientStreet, form.ClientCity)
+                    ? new AddressDto(Country: OrDefault(form.ClientCountry, "PL"), Line1: NullIfEmpty(form.ClientStreet), City: NullIfEmpty(form.ClientCity), ZipCode: NullIfEmpty(form.ClientZipCode))
+                    : null;
+                var tin = NullIfEmpty(form.ClientTin);
+                client = new DocumentCreateClientDto(Name: form.ClientName, Kind: ck, Tin: tin, TinKind: tin is not null ? tinKind : null, Address: addr);
+            }
+            else { client = null; }
+
+            // Buyer
+            DocumentCreateClientDto? buyer = !string.IsNullOrWhiteSpace(form.BuyerName)
+                ? new DocumentCreateClientDto(Name: form.BuyerName, Tin: NullIfEmpty(form.BuyerTin))
+                : null;
+
+            // Delivery address
+            AddressDto? deliveryAddr = HasValue(form.DeliveryStreet, form.DeliveryCity)
+                ? new AddressDto(Country: OrDefault(form.DeliveryCountry, "PL"), Line1: NullIfEmpty(form.DeliveryStreet), City: NullIfEmpty(form.DeliveryCity), ZipCode: NullIfEmpty(form.DeliveryZipCode))
+                : null;
+
+            // Bank accounts
+            DocumentBankAccountDto? bankAcc = HasValue(form.BankAccountName, form.BankAccountNumber)
+                ? new DocumentBankAccountDto(Name: NullIfEmpty(form.BankAccountName), Number: NullIfEmpty(form.BankAccountNumber))
+                : null;
+            DocumentBankAccountDto? bankAccPln = HasValue(form.BankAccountPlnName, form.BankAccountPlnNumber)
+                ? new DocumentBankAccountDto(Name: NullIfEmpty(form.BankAccountPlnName), Number: NullIfEmpty(form.BankAccountPlnNumber))
+                : null;
+
+            // Exchange rate
+            ExchangeRateDto? exchangeRate = form.ExchangeRate.HasValue
+                ? new ExchangeRateDto(Rate: form.ExchangeRate, Unit: form.ExchangeRateUnit, TableNo: NullIfEmpty(form.ExchangeRateTableNo), Date: form.ExchangeRateDate)
+                : null;
+
+            // Items
+            var no = 1;
+            var items = form.Items
+                .Where(i => !string.IsNullOrWhiteSpace(i.ProductName))
+                .Select(i => new CreateDocumentItemDto(
+                    ProductName: i.ProductName!,
+                    Unit: string.IsNullOrWhiteSpace(i.Unit) ? "szt" : i.Unit,
+                    VatRate: NormalizeVatRate(i.VatRate),
+                    No: no++,
+                    Quantity: i.Quantity ?? 1,
+                    NetPrice: i.NetPrice ?? 0,
+                    GrossPrice: i.GrossPrice,
+                    Discount: i.Discount,
+                    DiscountKind: Enum.TryParse<DiscountKind>(i.DiscountKind, out var dkp) ? dkp : null,
+                    Symbol: NullIfEmpty(i.Symbol),
+                    Barcode: NullIfEmpty(i.Barcode),
+                    Pkwiu: NullIfEmpty(i.Pkwiu),
+                    CnCode: NullIfEmpty(i.CnCode),
+                    Gtu: NullIfEmpty(i.Gtu),
+                    Note: NullIfEmpty(i.Note)))
+                .ToList();
+
+            // Payments
+            var payments = form.Payments
+                .Where(p => p.Value > 0)
+                .Select(p => new PaymentDto(Date: p.Date, OnDocument: p.OnDocument, Value: p.Value))
+                .ToList();
+
+            // JPK VAT groups
+            List<string>? jpk = !string.IsNullOrWhiteSpace(form.JpkVatGroups)
+                ? form.JpkVatGroups.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList()
+                : null;
+
+            // DeliveryDate only for Invoice
+            var deliveryDate = kind == DocumentKind.Invoice ? (form.DeliveryDate ?? form.IssueDate) : (DateTime?)null;
+
+            var dto = new CreateDocumentDto(
+                Currency: form.Currency,
+                Issuer: form.Issuer,
+                Kind: kind,
+                CalculationMethod: calcMethod,
+                CommunityTransaction: commTrans,
+                IssueDate: form.IssueDate,
+                DeliveryDate: deliveryDate,
+                DueDate: form.DueDate,
+                OrderDate: form.OrderDate,
+                TaxLiabilityDate: form.TaxLiabilityDate,
+                DueDateDescription: NullIfEmpty(form.DueDateDescription),
+                PaymentMethod: payMethod,
+                SplitPayment: splitPay,
+                CashBasis: form.CashBasis ? true : null,
+                EInvoice: form.EInvoice ? true : null,
+                Client: client,
+                Buyer: buyer,
+                DeliveryAddress: deliveryAddr,
+                BankAccount: bankAcc,
+                BankAccountPln: bankAccPln,
+                ExchangeRate: exchangeRate,
+                Items: items,
+                Payments: payments,
+                Recipient: NullIfEmpty(form.Recipient),
+                TransactionLocation: NullIfEmpty(form.TransactionLocation),
+                VatReleaseReason: vatRelease,
+                CustomVatReleaseReason: NullIfEmpty(form.CustomVatReleaseReason),
+                JpkVatGroups: jpk,
+                WstoConsumerCountry: NullIfEmpty(form.WstoConsumerCountry),
+                WstoShipmentCountry: NullIfEmpty(form.WstoShipmentCountry),
+                WstoAdditionalInformation: NullIfEmpty(form.WstoAdditionalInformation),
+                Note: NullIfEmpty(form.Note)
+            );
+
+            var result = await Sdk.Documents.CreateAsync(dto);
+            success = $"Dokument utworzony pomyślnie. ID: {result.Id?.Value}";
+        }
+        catch (Exception ex) { error = ex.Message; }
+        finally { saving = false; }
+    }
+
+    private static string NormalizeVatRate(string? rate)
+    {
+        if (string.IsNullOrWhiteSpace(rate)) return "23%";
+        var t = rate.Trim();
+        if (t.EndsWith('%') || !decimal.TryParse(t, out _)) return t;
+        return t + "%";
+    }
+
+    private static string? NullIfEmpty(string? s) => string.IsNullOrWhiteSpace(s) ? null : s;
+    private static string OrDefault(string? s, string def) => string.IsNullOrWhiteSpace(s) ? def : s;
+    private static bool HasValue(params string?[] values) => values.Any(v => !string.IsNullOrWhiteSpace(v));
+
+    private class DocumentForm
+    {
+        // Main
+        public string Kind { get; set; } = "Invoice";
+        public string Currency { get; set; } = "PLN";
+        public string Issuer { get; set; } = "";
+        public string Recipient { get; set; } = "";
+        // Dates
+        public DateTime? IssueDate { get; set; } = DateTime.Today;
+        public DateTime? DeliveryDate { get; set; }
+        public DateTime? DueDate { get; set; }
+        public DateTime? OrderDate { get; set; }
+        public DateTime? TaxLiabilityDate { get; set; }
+        public string DueDateDescription { get; set; } = "";
+        // Settings
+        public string PaymentMethod { get; set; } = "BankTransfer";
+        public string CalculationMethod { get; set; } = "Net";
+        public string CommunityTransaction { get; set; } = "SK";
+        public string SplitPayment { get; set; } = "";
+        public string TransactionLocation { get; set; } = "";
+        public bool CashBasis { get; set; }
+        public bool EInvoice { get; set; }
+        // Exchange rate
+        public decimal? ExchangeRate { get; set; }
+        public int? ExchangeRateUnit { get; set; } = 1;
+        public string ExchangeRateTableNo { get; set; } = "";
+        public DateTime? ExchangeRateDate { get; set; }
+        // Bank accounts
+        public string BankAccountName { get; set; } = "";
+        public string BankAccountNumber { get; set; } = "";
+        public string BankAccountPlnName { get; set; } = "";
+        public string BankAccountPlnNumber { get; set; } = "";
+        // Client
+        public string ClientName { get; set; } = "";
+        public string ClientTin { get; set; } = "";
+        public string ClientTinKind { get; set; } = "";
+        public string ClientKind { get; set; } = "Company";
+        public string ClientStreet { get; set; } = "";
+        public string ClientCity { get; set; } = "";
+        public string ClientZipCode { get; set; } = "";
+        public string ClientCountry { get; set; } = "PL";
+        // Buyer
+        public string BuyerName { get; set; } = "";
+        public string BuyerTin { get; set; } = "";
+        // Delivery address
+        public string DeliveryStreet { get; set; } = "";
+        public string DeliveryCity { get; set; } = "";
+        public string DeliveryZipCode { get; set; } = "";
+        public string DeliveryCountry { get; set; } = "PL";
+        // VAT
+        public string VatReleaseReason { get; set; } = "";
+        public string CustomVatReleaseReason { get; set; } = "";
+        public string JpkVatGroups { get; set; } = "";
+        // WSTO
+        public string WstoConsumerCountry { get; set; } = "";
+        public string WstoShipmentCountry { get; set; } = "";
+        public string WstoAdditionalInformation { get; set; } = "";
+        // Other
+        public string Note { get; set; } = "";
+        public List<ItemForm> Items { get; set; } = [new()];
+        public List<PaymentForm> Payments { get; set; } = [new()];
+    }
+
+    private class ItemForm
+    {
+        public string? ProductName { get; set; } = "";
+        public decimal? Quantity { get; set; } = 1;
+        public string Unit { get; set; } = "szt";
+        public decimal? NetPrice { get; set; }
+        public decimal? GrossPrice { get; set; }
+        public string VatRate { get; set; } = "23%";
+        public decimal? Discount { get; set; }
+        public string DiscountKind { get; set; } = "";
+        public string Symbol { get; set; } = "";
+        public string Barcode { get; set; } = "";
+        public string Pkwiu { get; set; } = "";
+        public string CnCode { get; set; } = "";
+        public string Gtu { get; set; } = "";
+        public string Note { get; set; } = "";
+    }
+
+    private class PaymentForm
+    {
+        public DateTime? Date { get; set; } = DateTime.Today;
+        public decimal Value { get; set; }
+        public bool OnDocument { get; set; } = true;
+    }
+}

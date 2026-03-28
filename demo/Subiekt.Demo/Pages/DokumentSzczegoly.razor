@@ -1,0 +1,501 @@
+@page "/dokumenty/{Id:guid}"
+@using Subiekt.Connector.Sdk
+@using Subiekt.Connector.Contracts
+@inject SubiektClient Sdk
+
+<h3>Dokument — podgląd</h3>
+
+@if (!Sdk.IsAuthorized)
+{
+    <div class="alert alert-warning">Nie jesteś zalogowany. <a href="auth">Przejdź do autoryzacji</a></div>
+    return;
+}
+
+@if (loading)
+{
+    <p><span class="spinner-border spinner-border-sm"></span> Ładowanie...</p>
+    return;
+}
+
+@if (error is not null)
+{
+    <div class="alert alert-danger">@error</div>
+    <a href="/dokumenty" class="btn btn-outline-secondary">Wróć do listy</a>
+    return;
+}
+
+@if (doc is null) return;
+
+<div class="mb-3">
+    <a href="/dokumenty" class="btn btn-outline-secondary btn-sm">Wróć do listy</a>
+</div>
+
+<div class="row g-3">
+    @* ── Nagłówek ── *@
+    <div class="col-md-4">
+        <label class="form-label fw-bold">Numer dokumentu</label>
+        <input class="form-control" readonly value="@doc.DocumentNumber" />
+    </div>
+    <div class="col-md-2">
+        <label class="form-label fw-bold">Rodzaj</label>
+        <input class="form-control" readonly value="@doc.Kind" />
+    </div>
+    <div class="col-md-2">
+        <label class="form-label fw-bold">Waluta</label>
+        <input class="form-control" readonly value="@doc.Currency" />
+    </div>
+    <div class="col-md-2">
+        <label class="form-label fw-bold">Wystawca</label>
+        <input class="form-control" readonly value="@doc.Issuer" />
+    </div>
+    <div class="col-md-2">
+        <label class="form-label fw-bold">Odbiorca</label>
+        <input class="form-control" readonly value="@doc.Recipient" />
+    </div>
+
+    @* ── ID ── *@
+    <div class="col-md-4">
+        <label class="form-label">ID</label>
+        <input class="form-control form-control-sm" readonly value="@doc.Id" />
+    </div>
+    <div class="col-md-4">
+        <label class="form-label">Tryb faktury</label>
+        <input class="form-control form-control-sm" readonly value="@doc.InvoiceMode" />
+    </div>
+    <div class="col-md-4">
+        <label class="form-label">Nr KSeF</label>
+        <input class="form-control form-control-sm" readonly value="@doc.KsefNumber" />
+    </div>
+
+    @* ── Daty ── *@
+    <div class="col-md-2">
+        <label class="form-label">Data wystawienia</label>
+        <input class="form-control" readonly value="@Fmt(doc.IssueDate)" />
+    </div>
+    <div class="col-md-2">
+        <label class="form-label">Data dostawy</label>
+        <input class="form-control" readonly value="@Fmt(doc.DeliveryDate)" />
+    </div>
+    <div class="col-md-2">
+        <label class="form-label">Termin płatności</label>
+        <input class="form-control" readonly value="@Fmt(doc.DueDate)" />
+    </div>
+    <div class="col-md-2">
+        <label class="form-label">Data zamówienia</label>
+        <input class="form-control" readonly value="@Fmt(doc.OrderDate)" />
+    </div>
+    <div class="col-md-2">
+        <label class="form-label">Obow. podatkowy</label>
+        <input class="form-control" readonly value="@Fmt(doc.TaxLiabilityDate)" />
+    </div>
+    <div class="col-md-2">
+        <label class="form-label">Opis terminu</label>
+        <input class="form-control" readonly value="@doc.DueDateDescription" />
+    </div>
+
+    @* ── Ustawienia ── *@
+    <div class="col-md-2">
+        <label class="form-label">Metoda płatności</label>
+        <input class="form-control" readonly value="@doc.PaymentMethod" />
+    </div>
+    <div class="col-md-2">
+        <label class="form-label">Kalkulacja</label>
+        <input class="form-control" readonly value="@doc.CalculationMethod" />
+    </div>
+    <div class="col-md-2">
+        <label class="form-label">Transakcja</label>
+        <input class="form-control" readonly value="@doc.CommunityTransaction" />
+    </div>
+    <div class="col-md-2">
+        <label class="form-label">Split payment</label>
+        <input class="form-control" readonly value="@doc.SplitPayment" />
+    </div>
+    <div class="col-md-2">
+        <label class="form-label">Miejsce transakcji</label>
+        <input class="form-control" readonly value="@doc.TransactionLocation" />
+    </div>
+    <div class="col-md-2">
+        <label class="form-label">Ostatnia modyfikacja</label>
+        <input class="form-control" readonly value="@Fmt(doc.LastModificationDate)" />
+    </div>
+
+    @* ── Flagi ── *@
+    <div class="col-md-2">
+        <div class="form-check mt-4">
+            <input class="form-check-input" type="checkbox" checked="@(doc.CashBasis == true)" disabled />
+            <label class="form-check-label">Metoda kasowa</label>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="form-check mt-4">
+            <input class="form-check-input" type="checkbox" checked="@(doc.IssuedByVatPayer == true)" disabled />
+            <label class="form-check-label">Płatnik VAT</label>
+        </div>
+    </div>
+
+    @* ── Kwoty ── *@
+    <div class="col-12"><hr /><h5>Kwoty</h5></div>
+    <div class="col-md-2">
+        <label class="form-label fw-bold">Netto</label>
+        <input class="form-control" readonly value="@Dec(doc.TotalNet) @doc.Currency" />
+    </div>
+    <div class="col-md-2">
+        <label class="form-label fw-bold">Brutto</label>
+        <input class="form-control" readonly value="@Dec(doc.TotalGross) @doc.Currency" />
+    </div>
+    <div class="col-md-2">
+        <label class="form-label">Netto PLN</label>
+        <input class="form-control" readonly value="@Dec(doc.TotalNetPln)" />
+    </div>
+    <div class="col-md-2">
+        <label class="form-label">Brutto PLN</label>
+        <input class="form-control" readonly value="@Dec(doc.TotalGrossPln)" />
+    </div>
+    <div class="col-md-2">
+        <label class="form-label fw-bold">Pozostało</label>
+        <input class="form-control" readonly value="@Dec(doc.LeftToPay)" />
+    </div>
+    <div class="col-md-2">
+        <label class="form-label fw-bold">Status płatności</label>
+        <input class="form-control" readonly value="@doc.PaymentState" />
+    </div>
+
+    @* ── Kurs waluty ── *@
+    @if (doc.ExchangeRate is not null)
+    {
+        <div class="col-12"><h6>Kurs waluty</h6></div>
+        <div class="col-md-3">
+            <label class="form-label">Kurs</label>
+            <input class="form-control" readonly value="@doc.ExchangeRate.Rate" />
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">Jednostka</label>
+            <input class="form-control" readonly value="@doc.ExchangeRate.Unit" />
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">Nr tabeli</label>
+            <input class="form-control" readonly value="@doc.ExchangeRate.TableNo" />
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">Data kursu</label>
+            <input class="form-control" readonly value="@Fmt(doc.ExchangeRate.Date)" />
+        </div>
+    }
+
+    @* ── Konto bankowe ── *@
+    @if (doc.BankAccount is not null)
+    {
+        <div class="col-12"><hr /><h5>Konto bankowe</h5></div>
+        <div class="col-md-4">
+            <label class="form-label">Nazwa</label>
+            <input class="form-control" readonly value="@doc.BankAccount.Name" />
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Numer</label>
+            <input class="form-control" readonly value="@doc.BankAccount.Number" />
+        </div>
+    }
+    @if (doc.BankAccountPln is not null)
+    {
+        <div class="col-md-2">
+            <label class="form-label">Bank PLN</label>
+            <input class="form-control" readonly value="@doc.BankAccountPln.Name" />
+        </div>
+        <div class="col-md-2">
+            <label class="form-label">Nr PLN</label>
+            <input class="form-control" readonly value="@doc.BankAccountPln.Number" />
+        </div>
+    }
+
+    @* ── Klient ── *@
+    @if (doc.Client is not null)
+    {
+        <div class="col-12"><hr /><h5>Klient (nabywca)</h5></div>
+        <div class="col-md-4">
+            <label class="form-label">Nazwa</label>
+            <input class="form-control" readonly value="@doc.Client.Name" />
+        </div>
+        <div class="col-md-2">
+            <label class="form-label">NIP</label>
+            <input class="form-control" readonly value="@doc.Client.Tin" />
+        </div>
+        <div class="col-md-2">
+            <label class="form-label">Typ NIP</label>
+            <input class="form-control" readonly value="@doc.Client.TinKind" />
+        </div>
+        <div class="col-md-2">
+            <label class="form-label">Rodzaj</label>
+            <input class="form-control" readonly value="@doc.Client.Kind" />
+        </div>
+        @if (doc.Client.Address is not null)
+        {
+            <div class="col-md-3">
+                <label class="form-label">Ulica</label>
+                <input class="form-control" readonly value="@doc.Client.Address.Line1" />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Miasto</label>
+                <input class="form-control" readonly value="@doc.Client.Address.City" />
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Kod</label>
+                <input class="form-control" readonly value="@doc.Client.Address.ZipCode" />
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Kraj</label>
+                <input class="form-control" readonly value="@doc.Client.Address.Country" />
+            </div>
+        }
+    }
+
+    @* ── Kupujący ── *@
+    @if (doc.Buyer is not null)
+    {
+        <div class="col-12"><h6>Kupujący</h6></div>
+        <div class="col-md-4">
+            <label class="form-label">Nazwa</label>
+            <input class="form-control" readonly value="@doc.Buyer.Name" />
+        </div>
+        <div class="col-md-2">
+            <label class="form-label">NIP</label>
+            <input class="form-control" readonly value="@doc.Buyer.Tin" />
+        </div>
+    }
+
+    @* ── Sprzedawca ── *@
+    @if (doc.Seller is not null)
+    {
+        <div class="col-12"><h6>Sprzedawca</h6></div>
+        <div class="col-md-4">
+            <label class="form-label">Nazwa</label>
+            <input class="form-control" readonly value="@doc.Seller.Name" />
+        </div>
+        <div class="col-md-2">
+            <label class="form-label">NIP</label>
+            <input class="form-control" readonly value="@doc.Seller.Tin" />
+        </div>
+        <div class="col-md-2">
+            <label class="form-label">Rodzaj</label>
+            <input class="form-control" readonly value="@doc.Seller.Kind" />
+        </div>
+        @if (doc.Seller.Address is not null)
+        {
+            <div class="col-md-4">
+                <label class="form-label">Adres</label>
+                <input class="form-control" readonly value="@($"{doc.Seller.Address.Line1}, {doc.Seller.Address.ZipCode} {doc.Seller.Address.City}, {doc.Seller.Address.Country}")" />
+            </div>
+        }
+    }
+
+    @* ── Adres dostawy ── *@
+    @if (doc.DeliveryAddress is not null)
+    {
+        <div class="col-12"><h6>Adres dostawy</h6></div>
+        <div class="col-md-3">
+            <label class="form-label">Ulica</label>
+            <input class="form-control" readonly value="@doc.DeliveryAddress.Line1" />
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">Miasto</label>
+            <input class="form-control" readonly value="@doc.DeliveryAddress.City" />
+        </div>
+        <div class="col-md-2">
+            <label class="form-label">Kod</label>
+            <input class="form-control" readonly value="@doc.DeliveryAddress.ZipCode" />
+        </div>
+        <div class="col-md-2">
+            <label class="form-label">Kraj</label>
+            <input class="form-control" readonly value="@doc.DeliveryAddress.Country" />
+        </div>
+    }
+
+    @* ── Pozycje ── *@
+    <div class="col-12"><hr /><h5>Pozycje (@(doc.Items?.Count ?? 0))</h5></div>
+
+    @if (doc.Items is not null)
+    {
+        @for (int i = 0; i < doc.Items.Count; i++)
+        {
+            var item = doc.Items[i];
+            <div class="card p-2 mb-2">
+                <div class="row g-2">
+                    <div class="col-md-1">
+                        <label class="form-label">Nr</label>
+                        <input class="form-control form-control-sm" readonly value="@item.No" />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Nazwa produktu</label>
+                        <input class="form-control form-control-sm" readonly value="@item.ProductName" />
+                    </div>
+                    <div class="col-md-1">
+                        <label class="form-label">Ilość</label>
+                        <input class="form-control form-control-sm" readonly value="@item.Quantity" />
+                    </div>
+                    <div class="col-md-1">
+                        <label class="form-label">Jedn.</label>
+                        <input class="form-control form-control-sm" readonly value="@item.Unit" />
+                    </div>
+                    <div class="col-md-1">
+                        <label class="form-label">Cena netto</label>
+                        <input class="form-control form-control-sm" readonly value="@Dec(item.NetPrice)" />
+                    </div>
+                    <div class="col-md-1">
+                        <label class="form-label">Cena brutto</label>
+                        <input class="form-control form-control-sm" readonly value="@Dec(item.GrossPrice)" />
+                    </div>
+                    <div class="col-md-1">
+                        <label class="form-label">VAT</label>
+                        <input class="form-control form-control-sm" readonly value="@item.VatRate" />
+                    </div>
+                    <div class="col-md-1">
+                        <label class="form-label">Wart. netto</label>
+                        <input class="form-control form-control-sm" readonly value="@Dec(item.NetValue)" />
+                    </div>
+                    <div class="col-md-1">
+                        <label class="form-label">Wart. brutto</label>
+                        <input class="form-control form-control-sm" readonly value="@Dec(item.GrossValue)" />
+                    </div>
+                </div>
+                @if (item.Discount is not null || item.Barcode is not null || item.Pkwiu is not null || item.CnCode is not null || item.Gtu is not null || item.Symbol is not null || item.Note is not null)
+                {
+                    <div class="row g-2 mt-1">
+                        <div class="col-md-1">
+                            <label class="form-label">Rabat</label>
+                            <input class="form-control form-control-sm" readonly value="@Dec(item.Discount) @item.DiscountKind" />
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">Symbol</label>
+                            <input class="form-control form-control-sm" readonly value="@item.Symbol" />
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">Kod kreskowy</label>
+                            <input class="form-control form-control-sm" readonly value="@item.Barcode" />
+                        </div>
+                        <div class="col-md-1">
+                            <label class="form-label">PKWiU</label>
+                            <input class="form-control form-control-sm" readonly value="@item.Pkwiu" />
+                        </div>
+                        <div class="col-md-1">
+                            <label class="form-label">CN</label>
+                            <input class="form-control form-control-sm" readonly value="@item.CnCode" />
+                        </div>
+                        <div class="col-md-1">
+                            <label class="form-label">GTU</label>
+                            <input class="form-control form-control-sm" readonly value="@item.Gtu" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Uwagi</label>
+                            <input class="form-control form-control-sm" readonly value="@item.Note" />
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    }
+
+    @* ── Tabela VAT ── *@
+    @if (doc.VatTableItems is not null && doc.VatTableItems.Count > 0)
+    {
+        <div class="col-12"><h6>Tabela VAT</h6></div>
+        <table class="table table-sm table-bordered">
+            <thead><tr><th>Stawka</th><th>Netto</th><th>VAT</th><th>Brutto</th><th>Netto PLN</th><th>VAT PLN</th><th>Brutto PLN</th></tr></thead>
+            <tbody>
+                @foreach (var v in doc.VatTableItems)
+                {
+                    <tr>
+                        <td>@v.VatRate</td>
+                        <td class="text-end">@Dec(v.Net)</td>
+                        <td class="text-end">@Dec(v.Vat)</td>
+                        <td class="text-end">@Dec(v.Gross)</td>
+                        <td class="text-end">@Dec(v.NetPln)</td>
+                        <td class="text-end">@Dec(v.VatPln)</td>
+                        <td class="text-end">@Dec(v.GrossPln)</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+
+    @* ── Płatności ── *@
+    @if (doc.Payments is not null && doc.Payments.Count > 0)
+    {
+        <div class="col-12"><hr /><h5>Płatności (@doc.Payments.Count)</h5></div>
+        @foreach (var p in doc.Payments)
+        {
+            <div class="row g-2 mb-2">
+                <div class="col-md-3">
+                    <label class="form-label">Data</label>
+                    <input class="form-control" readonly value="@Fmt(p.Date)" />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Kwota</label>
+                    <input class="form-control" readonly value="@Dec(p.Value)" />
+                </div>
+                <div class="col-md-3">
+                    <div class="form-check mt-4">
+                        <input class="form-check-input" type="checkbox" checked="@(p.OnDocument == true)" disabled />
+                        <label class="form-check-label">Na dokumencie</label>
+                    </div>
+                </div>
+            </div>
+        }
+    }
+
+    @* ── Dodatkowe ── *@
+    <div class="col-12"><hr /><h5>Dodatkowe</h5></div>
+    <div class="col-md-3">
+        <label class="form-label">Zwolnienie z VAT</label>
+        <input class="form-control" readonly value="@doc.VatReleaseReason" />
+    </div>
+    <div class="col-md-3">
+        <label class="form-label">Własny powód</label>
+        <input class="form-control" readonly value="@doc.CustomVatReleaseReason" />
+    </div>
+    <div class="col-md-3">
+        <label class="form-label">Grupy JPK VAT</label>
+        <input class="form-control" readonly value="@(doc.JpkVatGroups is not null ? string.Join(", ", doc.JpkVatGroups) : "")" />
+    </div>
+    <div class="col-md-3">
+        <label class="form-label">WSTO kraj konsumenta</label>
+        <input class="form-control" readonly value="@doc.WstoConsumerCountry" />
+    </div>
+    <div class="col-md-3">
+        <label class="form-label">WSTO kraj wysyłki</label>
+        <input class="form-control" readonly value="@doc.WstoShipmentCountry" />
+    </div>
+    <div class="col-md-6">
+        <label class="form-label">WSTO info dodatkowe</label>
+        <input class="form-control" readonly value="@doc.WstoAdditionalInformation" />
+    </div>
+
+    <div class="col-md-12">
+        <label class="form-label">Notatka</label>
+        <textarea class="form-control" readonly rows="2">@doc.Note</textarea>
+    </div>
+
+    <div class="col-12 mb-5">
+        <a href="/dokumenty" class="btn btn-outline-secondary">Wróć do listy</a>
+    </div>
+</div>
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+
+    private DocumentDto? doc;
+    private bool loading = true;
+    private string? error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!Sdk.IsAuthorized) { loading = false; return; }
+        try
+        {
+            doc = await Sdk.Documents.GetAsync(Id);
+        }
+        catch (Exception ex) { error = ex.Message; }
+        finally { loading = false; }
+    }
+
+    private static string Fmt(DateTime? d) => d?.ToString("yyyy-MM-dd") ?? "";
+    private static string Dec(decimal? d) => d?.ToString("N2") ?? "";
+}

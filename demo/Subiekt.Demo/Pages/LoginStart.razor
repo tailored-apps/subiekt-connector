@@ -1,0 +1,17 @@
+@page "/auth/login"
+@using Subiekt.Connector.Sdk
+@using Subiekt.Connector.Sdk.Auth
+@inject SubiektClient Sdk
+@inject InMemoryOAuthStateCache StateCache
+@inject NavigationManager Nav
+
+<p>Przekierowanie do InsERT...</p>
+
+@code {
+    protected override void OnInitialized()
+    {
+        var (url, state) = Sdk.Auth.BuildAuthorizationUrl();
+        StateCache.Set(state.State, state);
+        Nav.NavigateTo(url, forceLoad: true);
+    }
+}

@@ -1,0 +1,38 @@
+#!/bin/bash
+# 🐧 pre-push — build + testy przed wypychaniem do zdalnego repozytorium
+
+set -e
+
+echo "🔨 Build przed push..."
+
+export PATH="$HOME/.dotnet:$PATH"
+if ! command -v dotnet &> /dev/null; then
+    echo "⚠️  dotnet nie znaleziony — pomijam build/testy"
+    exit 0
+fi
+
+# Build
+dotnet build --configuration Release --no-incremental 2>&1
+BUILD_STATUS=$?
+
+if [ $BUILD_STATUS -ne 0 ]; then
+    echo ""
+    echo "❌ Build nie przeszedł! Push zablokowany."
+    exit 1
+fi
+
+echo "✅ Build OK"
+echo ""
+
+# Testy
+echo "🧪 Uruchamiam testy..."
+dotnet test --configuration Release --no-build --verbosity normal 2>&1
+TEST_STATUS=$?
+
+if [ $TEST_STATUS -ne 0 ]; then
+    echo ""
+    echo "❌ Testy nie przeszły! Push zablokowany."
+    exit 1
+fi
+
+echo "✅ Testy OK — push dozwolony"

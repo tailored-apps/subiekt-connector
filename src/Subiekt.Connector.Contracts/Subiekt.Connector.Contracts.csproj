@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <PackageId>Subiekt.Connector.Contracts</PackageId>
+    <Version>1.1.0</Version>
+  </PropertyGroup>
+  <Target Name="GenerateContracts" BeforeTargets="BeforeCompile" Condition="Exists('$(MSBuildThisFileDirectory)..\..\tools\ContractGenerator\ContractGenerator.csproj')">
+    <Exec Command="dotnet run --project &quot;$(MSBuildThisFileDirectory)..\..\tools\ContractGenerator\ContractGenerator.csproj&quot; --no-launch-profile" WorkingDirectory="$(MSBuildThisFileDirectory)..\.." />
+  </Target>
+</Project>

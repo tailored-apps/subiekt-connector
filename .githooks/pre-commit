@@ -1,0 +1,26 @@
+#!/bin/bash
+# 🐧 pre-commit — sprawdza formatowanie kodu (dotnet format)
+# Instalacja: git config core.hooksPath .githooks
+
+set -e
+
+echo "🔍 Sprawdzam formatowanie kodu..."
+
+export PATH="$HOME/.dotnet:$PATH"
+if ! command -v dotnet &> /dev/null; then
+    echo "⚠️  dotnet nie znaleziony — pomijam sprawdzenie formatowania"
+    exit 0
+fi
+
+dotnet format --verify-no-changes --verbosity diagnostic 2>&1
+STATUS=$?
+
+if [ $STATUS -ne 0 ]; then
+    echo ""
+    echo "❌ Formatowanie kodu nie jest poprawne!"
+    echo "   Uruchom: dotnet format"
+    echo "   Następnie: git add . && git commit"
+    exit 1
+fi
+
+echo "✅ Formatowanie OK"

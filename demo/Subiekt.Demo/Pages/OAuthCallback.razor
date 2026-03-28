@@ -1,0 +1,60 @@
+@page "/hook/callback"
+@using Subiekt.Connector.Sdk
+@using Subiekt.Connector.Sdk.Auth
+@inject SubiektClient Sdk
+@inject InMemoryOAuthStateCache StateCache
+@inject InMemoryTokenStore TokenStore
+@inject NavigationManager Nav
+@inject ILogger<OAuthCallback> Logger
+
+<p>Autoryzacja w toku...</p>
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        var uri = new Uri(Nav.Uri);
+        var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
+        var code = query["code"];
+        var state = query["state"];
+        var error = query["error"];
+
+        if (error is not null)
+        {
+            Nav.NavigateTo($"/auth?error={Uri.EscapeDataString(error)}", forceLoad: false);
+            return;
+        }
+
+        if (code is null || state is null)
+        {
+            Nav.NavigateTo("/auth?error=missing_params", forceLoad: false);
+            return;
+        }
+
+        var pending = StateCache.Get(state);
+        if (pending is null || pending.IsExpired)
+        {
+            Logger.LogError("OAuth state invalid or expired. state={State}, pending={Pending}, expired={Expired}",
+                state, pending is not null, pending?.IsExpired);
+            Nav.NavigateTo("/auth?error=invalid_state", forceLoad: false);
+            return;
+        }
+
+        try
+        {
+            var token = await Sdk.Auth.ExchangeCodeAsync(code, pending);
+            StateCache.Remove(state);
+            TokenStore.StoreTokens(token.AccessToken, token.RefreshToken, token.ExpiresAt);
+            Sdk.SetToken(token);
+            Nav.NavigateTo("/auth?success=true", forceLoad: false);
+        }
+        catch (NavigationException)
+        {
+            throw; // Blazor uses this internally for SSR redirects — must not swallow it
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Token exchange failed");
+            Nav.NavigateTo("/auth?error=token_exchange_failed", forceLoad: false);
+        }
+    }
+}

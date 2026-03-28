@@ -1,0 +1,178 @@
+@page "/klienci/nowy"
+@using Subiekt.Connector.Sdk
+@using Subiekt.Connector.Contracts
+@inject SubiektClient Sdk
+@inject NavigationManager Nav
+
+<h3>Nowy klient</h3>
+
+@if (!Sdk.IsAuthorized)
+{
+    <div class="alert alert-warning">
+        Nie jesteś zalogowany. <a href="auth">Przejdź do autoryzacji</a>
+    </div>
+    return;
+}
+
+@if (success is not null)
+{
+    <div class="alert alert-success">
+        @success
+        <a href="/" class="ms-2">Wróć do listy</a>
+    </div>
+    return;
+}
+
+@if (error is not null)
+{
+    <div class="alert alert-danger">@error</div>
+}
+
+<EditForm Model="form" OnValidSubmit="Submit" FormName="newClient">
+    <div class="row g-3">
+        <div class="col-md-8">
+            <label class="form-label">Nazwa *</label>
+            <InputText class="form-control" @bind-Value="form.Name" />
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Rodzaj</label>
+            <InputSelect class="form-select" @bind-Value="form.Kind">
+                <option value="Company">Firma</option>
+                <option value="Person">Osoba</option>
+            </InputSelect>
+        </div>
+
+        <div class="col-md-4">
+            <label class="form-label">NIP / PESEL</label>
+            <InputText class="form-control" @bind-Value="form.Tin" />
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Typ identyfikatora</label>
+            <InputSelect class="form-select" @bind-Value="form.TinKind">
+                <option value="">--</option>
+                <option value="Nip">NIP</option>
+                <option value="Vatin">VATIN</option>
+                <option value="Pesel">PESEL</option>
+            </InputSelect>
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Grupa</label>
+            <InputText class="form-control" @bind-Value="form.Group" />
+        </div>
+
+        <div class="col-12"><hr /><h5>Adres</h5></div>
+
+        <div class="col-md-6">
+            <label class="form-label">Ulica</label>
+            <InputText class="form-control" @bind-Value="form.Street" />
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">Kod pocztowy</label>
+            <InputText class="form-control" @bind-Value="form.ZipCode" />
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">Miasto</label>
+            <InputText class="form-control" @bind-Value="form.City" />
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">Kraj</label>
+            <InputText class="form-control" @bind-Value="form.Country" />
+        </div>
+
+        <div class="col-12"><hr /><h5>Kontakt</h5></div>
+
+        <div class="col-md-4">
+            <label class="form-label">Telefon</label>
+            <InputText class="form-control" @bind-Value="form.Phone1" />
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Email</label>
+            <InputText class="form-control" @bind-Value="form.Email" />
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">WWW</label>
+            <InputText class="form-control" @bind-Value="form.Website" />
+        </div>
+
+        <div class="col-md-12">
+            <label class="form-label">Notatka</label>
+            <InputTextArea class="form-control" @bind-Value="form.Note" rows="2" />
+        </div>
+
+        <div class="col-12 d-flex gap-2 mt-3">
+            <button type="submit" class="btn btn-primary" disabled="@saving">
+                @(saving ? "Zapisywanie..." : "Utwórz klienta")
+            </button>
+            <a href="/" class="btn btn-outline-secondary">Anuluj</a>
+        </div>
+    </div>
+</EditForm>
+
+@code {
+    private ClientForm form = new();
+    private bool saving;
+    private string? error;
+    private string? success;
+
+    private async Task Submit()
+    {
+        if (string.IsNullOrWhiteSpace(form.Name))
+        {
+            error = "Nazwa jest wymagana.";
+            return;
+        }
+
+        saving = true;
+        error = null;
+        StateHasChanged();
+        try
+        {
+            var address = !string.IsNullOrWhiteSpace(form.Street) || !string.IsNullOrWhiteSpace(form.City)
+                ? new AddressDto(
+                    Country: string.IsNullOrWhiteSpace(form.Country) ? "PL" : form.Country,
+                    Line1: form.Street,
+                    City: form.City,
+                    ZipCode: form.ZipCode)
+                : null;
+
+            var emails = !string.IsNullOrWhiteSpace(form.Email) ? new List<string> { form.Email } : null;
+            var tinKind = Enum.TryParse<TinKind>(form.TinKind, out var tk) ? tk : (TinKind?)null;
+            var kind = Enum.TryParse<ClientKind>(form.Kind, out var ck) ? ck : (ClientKind?)null;
+
+            var dto = new CreateClientDto(
+                Name: form.Name,
+                Kind: kind,
+                Tin: string.IsNullOrWhiteSpace(form.Tin) ? null : form.Tin,
+                TinKind: tinKind,
+                Address: address,
+                Phone1: string.IsNullOrWhiteSpace(form.Phone1) ? null : form.Phone1,
+                Emails: emails,
+                Website: string.IsNullOrWhiteSpace(form.Website) ? null : form.Website,
+                Note: string.IsNullOrWhiteSpace(form.Note) ? null : form.Note,
+                Group: string.IsNullOrWhiteSpace(form.Group) ? null : form.Group
+            );
+
+            var result = await Sdk.Clients.CreateAsync(dto);
+            success = $"Klient utworzony. ID: {result.Id?.Value}";
+        }
+        catch (Exception ex) { error = ex.Message; }
+        finally { saving = false; }
+    }
+
+    private class ClientForm
+    {
+        public string Name { get; set; } = "";
+        public string Kind { get; set; } = "Company";
+        public string Tin { get; set; } = "";
+        public string TinKind { get; set; } = "";
+        public string Group { get; set; } = "";
+        public string Street { get; set; } = "";
+        public string ZipCode { get; set; } = "";
+        public string City { get; set; } = "";
+        public string Country { get; set; } = "PL";
+        public string Phone1 { get; set; } = "";
+        public string Email { get; set; } = "";
+        public string Website { get; set; } = "";
+        public string Note { get; set; } = "";
+    }
+}

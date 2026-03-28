@@ -1,0 +1,83 @@
+@page "/auth"
+@using Subiekt.Connector.Sdk
+@using Subiekt.Connector.Sdk.Auth
+@inject SubiektClient Sdk
+@inject InMemoryTokenStore TokenStore
+@inject NavigationManager Nav
+
+<h3>Autoryzacja</h3>
+
+@if (successMessage is not null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <strong>✅ Sukces!</strong> @successMessage
+        <button type="button" class="btn-close" @onclick="() => successMessage = null"></button>
+    </div>
+}
+
+@if (errorMessage is not null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <strong>❌ Błąd:</strong> @errorMessage
+        <button type="button" class="btn-close" @onclick="() => errorMessage = null"></button>
+    </div>
+}
+
+<div class="card p-4">
+    @if (TokenStore.GetAccessToken() is not null && !TokenStore.IsExpired())
+    {
+        <div class="d-flex align-items-center gap-3 mb-3">
+            <span class="badge bg-success fs-6">● Połączono</span>
+            <span class="text-muted small">Token ważny przez ~@TimeLeft</span>
+        </div>
+        <p class="text-muted">Jesteś zalogowany do Subiekta 123. Możesz przeglądać klientów, dokumenty i produkty.</p>
+        <div class="d-flex gap-2">
+            <a class="btn btn-outline-primary" href="/">👥 Klienci</a>
+            <a class="btn btn-outline-primary" href="/dokumenty">📄 Dokumenty</a>
+            <a class="btn btn-outline-primary" href="/produkty">📦 Produkty</a>
+        </div>
+        <hr />
+        <button class="btn btn-outline-danger btn-sm" @onclick="Logout">🚪 Wyloguj</button>
+    }
+    else
+    {
+        <div class="d-flex align-items-center gap-3 mb-3">
+            <span class="badge bg-secondary fs-6">● Niezalogowany</span>
+        </div>
+        <p>Aby korzystać z aplikacji, połącz się z Subiektem 123.</p>
+        <a class="btn btn-primary btn-lg" href="/auth/login">🔐 Zaloguj się przez InsERT</a>
+    }
+</div>
+
+@code {
+    private string? successMessage;
+    private string? errorMessage;
+
+    private string TimeLeft => TokenStore.IsExpired() ? "wygasł" : "60 min";
+
+    protected override void OnInitialized()
+    {
+        var uri = new Uri(Nav.Uri);
+        var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
+
+        if (query["success"] == "true")
+            successMessage = "Połączono z Subiektem 123. Token ważny przez 60 minut.";
+
+        if (query["error"] is string err)
+            errorMessage = err switch
+            {
+                "missing_params"        => "Brakujące parametry autoryzacji. Spróbuj ponownie.",
+                "invalid_state"         => "Nieprawidłowy stan sesji. Spróbuj ponownie.",
+                "state_expired"         => "Sesja wygasła (> 5 min). Spróbuj ponownie.",
+                "token_exchange_failed" => "Nie udało się wymienić kodu na token. Sprawdź konfigurację.",
+                _                       => $"Błąd autoryzacji: {err}"
+            };
+    }
+
+    void Logout()
+    {
+        TokenStore.Clear();
+        Sdk.SetToken(default!);
+        Nav.NavigateTo("/auth", forceLoad: false);
+    }
+}

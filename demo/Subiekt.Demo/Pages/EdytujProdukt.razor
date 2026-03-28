@@ -1,0 +1,233 @@
+@page "/produkty/{Id:guid}"
+@using Subiekt.Connector.Sdk
+@using Subiekt.Connector.Contracts
+@inject SubiektClient Sdk
+
+<h3>Produkt — edycja</h3>
+
+@if (!Sdk.IsAuthorized)
+{
+    <div class="alert alert-warning">Nie jesteś zalogowany. <a href="auth">Przejdź do autoryzacji</a></div>
+    return;
+}
+
+@if (loading)
+{
+    <p><span class="spinner-border spinner-border-sm"></span> Ładowanie...</p>
+    return;
+}
+
+@if (success is not null)
+{
+    <div class="alert alert-success">@success</div>
+}
+
+@if (error is not null)
+{
+    <div class="alert alert-danger">@error</div>
+}
+
+@if (form is null) return;
+
+<div class="row g-3">
+    <div class="col-md-4">
+        <label class="form-label">ID</label>
+        <input class="form-control" readonly value="@Id" />
+    </div>
+
+    <div class="col-md-6">
+        <label class="form-label fw-bold">Nazwa *</label>
+        <input class="form-control" @bind="form.Name" />
+    </div>
+    <div class="col-md-3">
+        <label class="form-label">Symbol</label>
+        <input class="form-control" @bind="form.Symbol" />
+    </div>
+    <div class="col-md-3">
+        <label class="form-label">Rodzaj</label>
+        <select class="form-select" @bind="form.Kind">
+            <option value="Good">Towar</option>
+            <option value="Service">Usługa</option>
+        </select>
+    </div>
+
+    <div class="col-md-3">
+        <label class="form-label fw-bold">Jednostka *</label>
+        <input class="form-control" @bind="form.Unit" />
+    </div>
+    <div class="col-md-3">
+        <label class="form-label fw-bold">Stawka VAT *</label>
+        <input class="form-control" @bind="form.VatRate" />
+    </div>
+    <div class="col-md-3">
+        <label class="form-label">Cena netto (PLN)</label>
+        <input class="form-control" type="number" step="0.01" @bind="form.NetPrice" />
+    </div>
+    <div class="col-md-3">
+        <label class="form-label">Cena brutto (PLN)</label>
+        <input class="form-control" type="number" step="0.01" @bind="form.GrossPrice" />
+    </div>
+
+    <div class="col-md-4">
+        <label class="form-label">Grupa</label>
+        <input class="form-control" @bind="form.Group" />
+    </div>
+    <div class="col-md-4">
+        <label class="form-label">Kod kreskowy</label>
+        <input class="form-control" @bind="form.Barcode" />
+    </div>
+    <div class="col-md-4">
+        <label class="form-label">PKWiU</label>
+        <input class="form-control" @bind="form.Pkwiu" />
+    </div>
+
+    <div class="col-md-3">
+        <label class="form-label">Kod CN</label>
+        <input class="form-control" @bind="form.CnCode" />
+    </div>
+    <div class="col-md-3">
+        <label class="form-label">Nazwa fiskalna</label>
+        <input class="form-control" @bind="form.FiscalName" />
+    </div>
+    <div class="col-md-3">
+        <label class="form-label">Grupy JPK VAT (przecinki)</label>
+        <input class="form-control" @bind="form.JpkVatGroups" />
+    </div>
+    <div class="col-md-3 d-flex flex-column gap-2 pt-4">
+        <div class="form-check">
+            <input class="form-check-input" type="checkbox" @bind="form.Favourite" id="favP" />
+            <label class="form-check-label" for="favP">Ulubiony</label>
+        </div>
+        <div class="form-check">
+            <input class="form-check-input" type="checkbox" @bind="form.SubjectToSplitPayment" id="splitP" />
+            <label class="form-check-label" for="splitP">Split payment</label>
+        </div>
+    </div>
+
+    <div class="col-md-12">
+        <label class="form-label">Opis</label>
+        <textarea class="form-control" @bind="form.Description" rows="2"></textarea>
+    </div>
+
+    <div class="col-12 d-flex gap-2 mt-3 mb-5">
+        <button type="button" class="btn btn-primary" @onclick="Save" disabled="@saving">
+            @(saving ? "Zapisywanie..." : "Zapisz zmiany")
+        </button>
+        <a href="/produkty" class="btn btn-outline-secondary">Wróć do listy</a>
+    </div>
+</div>
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+
+    private ProductForm? form;
+    private string? etag;
+    private bool loading = true;
+    private bool saving;
+    private string? error;
+    private string? success;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!Sdk.IsAuthorized) { loading = false; return; }
+        try
+        {
+            var (product, e) = await Sdk.Products.GetWithEtagAsync(Id);
+            etag = e;
+            var plnPrice = product.Price?.FirstOrDefault(p => p.Currency == "PLN");
+            form = new ProductForm
+            {
+                Name = product.Name ?? "",
+                Symbol = product.Symbol ?? "",
+                Kind = product.Kind?.ToString() ?? "Good",
+                Unit = product.Unit ?? "szt",
+                VatRate = product.VatRate ?? "23%",
+                NetPrice = plnPrice?.Net,
+                GrossPrice = plnPrice?.Gross,
+                Group = product.Group ?? "",
+                Barcode = product.Barcode ?? "",
+                Pkwiu = product.Pkwiu ?? "",
+                CnCode = product.CnCode ?? "",
+                FiscalName = product.FiscalName ?? "",
+                JpkVatGroups = product.JpkVatGroups is not null ? string.Join(", ", product.JpkVatGroups) : "",
+                Favourite = product.Favourite ?? false,
+                SubjectToSplitPayment = product.SubjectToSplitPayment ?? false,
+                Description = product.Description ?? ""
+            };
+        }
+        catch (Exception ex) { error = ex.Message; }
+        finally { loading = false; }
+    }
+
+    private async Task Save()
+    {
+        if (form is null) return;
+        if (string.IsNullOrWhiteSpace(form.Name) || string.IsNullOrWhiteSpace(form.Unit) || string.IsNullOrWhiteSpace(form.VatRate))
+        { error = "Nazwa, jednostka i stawka VAT są wymagane."; return; }
+        if (etag is null) { error = "Brak ETag — nie można zapisać. Odśwież stronę."; return; }
+
+        saving = true;
+        error = null;
+        success = null;
+        StateHasChanged();
+        try
+        {
+            var kind = Enum.TryParse<ProductKind>(form.Kind, out var pk) ? pk : (ProductKind?)null;
+
+            List<PriceDto>? prices = null;
+            if (form.NetPrice.HasValue || form.GrossPrice.HasValue)
+                prices = [new PriceDto(Currency: "PLN", Net: form.NetPrice, Gross: form.GrossPrice)];
+
+            List<string>? jpk = !string.IsNullOrWhiteSpace(form.JpkVatGroups)
+                ? form.JpkVatGroups.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList()
+                : null;
+
+            var dto = new UpdateProductDto(
+                Name: form.Name,
+                Unit: form.Unit,
+                VatRate: form.VatRate,
+                Symbol: NullIfEmpty(form.Symbol),
+                Group: NullIfEmpty(form.Group),
+                Barcode: NullIfEmpty(form.Barcode),
+                Pkwiu: NullIfEmpty(form.Pkwiu),
+                CnCode: NullIfEmpty(form.CnCode),
+                FiscalName: NullIfEmpty(form.FiscalName),
+                JpkVatGroups: jpk,
+                Favourite: form.Favourite,
+                SubjectToSplitPayment: form.SubjectToSplitPayment,
+                Description: NullIfEmpty(form.Description),
+                Price: prices
+            );
+
+            await Sdk.Products.UpdateAsync(Id, dto, etag);
+
+            var (_, newEtag) = await Sdk.Products.GetWithEtagAsync(Id);
+            etag = newEtag;
+            success = "Zmiany zapisane.";
+        }
+        catch (Exception ex) { error = ex.Message; }
+        finally { saving = false; }
+    }
+
+    private static string? NullIfEmpty(string? s) => string.IsNullOrWhiteSpace(s) ? null : s;
+
+    private class ProductForm
+    {
+        public string Name { get; set; } = "";
+        public string Symbol { get; set; } = "";
+        public string Kind { get; set; } = "Good";
+        public string Unit { get; set; } = "szt";
+        public string VatRate { get; set; } = "23%";
+        public decimal? NetPrice { get; set; }
+        public decimal? GrossPrice { get; set; }
+        public string Group { get; set; } = "";
+        public string Barcode { get; set; } = "";
+        public string Pkwiu { get; set; } = "";
+        public string CnCode { get; set; } = "";
+        public string FiscalName { get; set; } = "";
+        public string JpkVatGroups { get; set; } = "";
+        public bool Favourite { get; set; }
+        public bool SubjectToSplitPayment { get; set; }
+        public string Description { get; set; } = "";
+    }
+}
