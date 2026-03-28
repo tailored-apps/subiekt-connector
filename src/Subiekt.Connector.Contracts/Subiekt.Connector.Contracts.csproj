@@ -3,9 +3,24 @@
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+
+    <!-- NuGet -->
     <PackageId>Subiekt.Connector.Contracts</PackageId>
     <Version>1.1.0</Version>
+    <Authors>Tailored Apps</Authors>
+    <Company>Tailored Apps</Company>
+    <Description>Auto-generated DTOs and contracts for Subiekt 123 API v1.1 (InsERT)</Description>
+    <PackageTags>subiekt;insert;erp;api;contracts;dto</PackageTags>
+    <RepositoryUrl>https://github.com/tailored-apps/subiekt-connector</RepositoryUrl>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="System.Text.Json" Version="10.0.*-*" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="../../README.md" Pack="true" PackagePath="/" />
+  </ItemGroup>
   <Target Name="GenerateContracts" BeforeTargets="BeforeCompile" Condition="Exists('$(MSBuildThisFileDirectory)..\..\tools\ContractGenerator\ContractGenerator.csproj')">
     <Exec Command="dotnet run --project &quot;$(MSBuildThisFileDirectory)..\..\tools\ContractGenerator\ContractGenerator.csproj&quot; --no-launch-profile" WorkingDirectory="$(MSBuildThisFileDirectory)..\.." />
   </Target>

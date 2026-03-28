@@ -9,3 +9,5 @@ obj/
 .DS_Store
 appsettings.Development.json
 secrets.json
+nupkgs/
+TestResults/
